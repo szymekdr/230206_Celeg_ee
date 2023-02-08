@@ -1,0 +1,284 @@
+---
+title: "C. elegans analysis"
+author: "Szymek Drobniak"
+date: "`r Sys.Date()`"
+output: rmdformats::robobook
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message = F}
+library(ggplot2)
+library(here)
+library(lme4)
+library(lmerTest)
+library(glmmTMB)
+library(car)
+library(tidyverse)
+library(emmeans)
+library(asreml)
+library(metafor)
+```
+
+## Data wrangling
+
+Restructuring the data to calculate fitness difference (effect size).
+
+First load the data:
+
+```{r}
+alldata <- read.table(here("Data", "all.csv"), sep = ";", head = T, stringsAsFactors = T)
+ancdata <- read.table(here("Data", "anc.csv"), sep = ";", head = T, stringsAsFactors = T)
+
+```
+
+Summarise the non-ancestral data to have means in each of 4 repeats:
+
+```{r}
+alldata_2 <- alldata %>%
+  filter(anc_pop != "X") %>%
+  group_by(block_unique) %>%
+  summarise(mean_Nstart = mean(propN_start),
+            mean_N1 = mean(propN_F1),
+            SD_Nstart = sd(propN_start),
+            SD_N1 = sd(propN_F1),
+            population = unique(population),
+            isoline = unique(isoline),
+            temperature = unique(temperature),
+            repr.type = unique(repr.type),
+            anc_pop = unique(anc_pop),
+            .groups = "drop")
+```
+
+Summarise the ancestral data to have means in each of 4 repeats:
+
+```{r}
+ancdata_2 <- ancdata %>%
+  group_by(block_unique) %>%
+  summarise(mean_Nstart_anc = mean(propN_start),
+            mean_N1_anc = mean(propN_F1),
+            SD_Nstart_anc = sd(propN_start),
+            SD_N1_anc = sd(propN_F1))
+```
+
+Merge actual data and ancestral data:
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  left_join(ancdata_2, by = c("anc_pop" = "block_unique")) %>%
+  select(-anc_pop)
+
+glimpse(alldata_2)
+```
+
+## Effect sizes
+
+We will use two types of fitness measures (for now without explicit errors): proportion difference and (natural log) of proportion ratio.
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  mutate(fitness_ee_1 = mean_N1 - mean_Nstart,
+         fitness_ee_2 = mean_N1/mean_Nstart,
+         fitness_ee_3 = log(mean_N1/mean_Nstart),
+         
+         fitness_anc_1 = mean_N1_anc - mean_Nstart_anc,
+         fitness_anc_2 = mean_N1_anc/mean_Nstart_anc,
+         fitness_anc_3 = log(mean_N1_anc/mean_Nstart_anc),
+         repr.type = relevel(repr.type, ref = "WT"))
+```
+
+Let's see the properties of these measures:
+
+```{r}
+ggplot(alldata_2) +
+  geom_density(mapping = aes(x = fitness_ee_1), colour = "brown") +
+  geom_density(mapping = aes(x = fitness_ee_2), colour = "red") +
+  geom_density(mapping = aes(x = fitness_ee_3), colour = "orange") +
+  theme_classic()
+
+ggplot(alldata_2) +
+  geom_density(mapping = aes(x = fitness_anc_1), colour = "darkblue") +
+  geom_density(mapping = aes(x = fitness_anc_2), colour = "blue") +
+  geom_density(mapping = aes(x = fitness_anc_3), colour = "turquoise") +
+  theme_classic()
+```
+
+As expected - the `log(proportion_1/proportion_0)` has much better distributional properties.
+
+Let's turn it into a simple effect size (fitness difference, for now without any sampling variance calculation):
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  mutate(d_1 = fitness_ee_1 - fitness_anc_1,
+         d_2 = fitness_ee_2 - fitness_anc_2,
+         d_3 = fitness_ee_3 - fitness_anc_3)
+```
+
+## Analysis using `lmer()`
+
+```{r}
+model1 <- lmer(d_1 ~ isoline * temperature * repr.type + (1|population), data = alldata_2)
+model2 <- lmer(d_2 ~ isoline * temperature * repr.type + (1|population), data = alldata_2)
+model3 <- lmer(d_3 ~ isoline * temperature * repr.type + (1|population), data = alldata_2)
+
+summary(model1)
+summary(model2)
+summary(model3)
+```
+
+```{r}
+emmip(model3, ~temperature+repr.type|isoline, CIs = T,
+      CIarg = list(col = "blue")) +
+  theme_bw()
+
+emmip(model3, ~temperature+repr.type, CIs = T,
+      CIarg = list(col = "blue")) +
+  theme_bw()
+```
+
+The patterns largely agree with what we can see in the model.
+
+## Sampling variances and meta-analysis
+
+The sampling variances of subsequent effect sizes are based on several relationships. The sampling variances of raw proportions are (because we do not have $N$ for all cases - we will have to make some assumptions, probably not too bold anyways)
+
+$$var(p)=\frac{p(1-p)}{N},$$
+
+and variance of the average of 4 proportions is (from stats theory)
+
+$$var(\hat{p}) = \frac{\sum_{i} var(p_{i})}{n^{2}} = \frac{1}{16}\sum_{i} var(p_{i}).$$
+Variance of a difference of two proportions $W_{1}=\hat{p}_{2}-\hat{p}_{1}$ is (from the delta method) $var(W_{1})=var(\hat{p}_{2})+var(\hat{p}_{1})$. We are ignoring here covariance of two proportions (which is reasonable) - but above we also ignored covariance of 4 replicated proportion which may not be reasonable, in such case we would have to increase the estimate (maybe worth trying) assuming some correlation $r$:
+
+$$var(\hat{p}) = \frac{\sum_{i} var(p_{i}) + 2\sum_{i}\sum_{j<1}cov(p_{i}p_{j})}{n^{2}} = \\ \frac{1}{16}\sum_{i} var(p_{i})+2\sum_{i}\sum_{j>i}r \sqrt{var(p_{i})}\sqrt{var(p_{j})}.$$
+
+Sampling variance of a log ratio is (from delta method):
+
+$$var(W_{2}) = var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\ 
+[\frac{\partial}{\partial \hat{p_{2}}}(ln\:\hat{p_{2}}-ln\:\hat{p_{1}})]^{2}\:var(p_{2}) + \\
+[\frac{\partial}{\partial \hat{p_{1}}}(ln\:\hat{p}_{2}-ln\:\hat{p}_{1})]^{2}\:var(\hat{p}_{1}) = \\ \frac{1}{\hat{p_{2}}^{2}}\:var(\hat{p_{2}})+\frac{1}{\hat{p_{1}}^{2}}\:var(\hat{p_{1}}).$$
+
+And finally - using those variances and fitness estimates - we can calculate $d$ and it's sampling variance (in the usual way):
+
+$$d = \frac {{W_{x,ee}} - {W_{x,anc}}} {s_{pooled}}J,$$
+$$s_{pooled} = \sqrt{\frac{(n_{1}-1)\:var(W_{x,ee})+(n_{2}-1)\:var(W_{x,anc})}{n_{ee}+n_{anc}-2}},$$
+
+$$J = 1-\frac{3}{4(n_{ee}+n_{anc}-2)-1}.$$
+
+First - let's calculate relevant effect sizes and sampling variances. We need to repeat the above calculations adding proportion sampling variance to original data:
+
+```{r}
+correction <- 2*3*0.8*0.0005
+# this correction assumes that on average variance of proportion estimation here is 0.0005
+# (close to actual averages of 0.0003-0.0006) and that (due to coming from the same
+# realisation of breeding the 4 replicates are strongly correlated (r = 0.8)
+# number 3 comes from the fact that in a 4x4 covariance matrix there are 3 correlations
+
+alldata_2 <- alldata %>%
+  filter(anc_pop != "X") %>%
+  mutate(varNstart = (propN_start*(1-propN_start))/sum,
+         varN1 = (propN_F1*(1-propN_F1))/(sum)) %>%
+  group_by(block_unique) %>%
+  summarise(mean_Nstart = mean(propN_start),
+            mean_N1 = mean(propN_F1),
+            var_Nstart = (sum(varNstart)/16)+correction,
+            var_N1 = (sum(varN1)/16)+correction,
+            population = unique(population),
+            isoline = unique(isoline),
+            temperature = unique(temperature),
+            repr.type = unique(repr.type),
+            anc_pop = unique(anc_pop),
+            .groups = "drop")
+```
+
+
+```{r}
+ancdata_2 <- ancdata %>%
+  mutate(varNstart = (propN_start*(1-propN_start))/sum,
+         varN1 = (propN_F1*(1-propN_F1))/(sum)) %>%
+  group_by(block_unique) %>%
+  summarise(mean_Nstart_anc = mean(propN_start),
+            mean_N1_anc = mean(propN_F1),
+            var_Nstart_anc = (sum(varNstart)/16)+correction,
+            var_N1_anc = (sum(varN1)/16)+correction)
+```
+
+Merge actual data and ancestral data:
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  left_join(ancdata_2, by = c("anc_pop" = "block_unique")) %>%
+  select(-anc_pop)
+
+glimpse(alldata_2)
+```
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  mutate(fitness_ee_1 = mean_N1 - mean_Nstart,
+         fitness_ee_2 = log(mean_N1/mean_Nstart),
+         var_f_ee_1 = var_Nstart + var_N1,
+         var_f_ee_2 = (1/mean_N1^2)*var_N1 + (1/mean_Nstart^2)*var_Nstart,
+         
+         fitness_anc_1 = mean_N1_anc - mean_Nstart_anc,
+         fitness_anc_2 = log(mean_N1_anc/mean_Nstart_anc),
+         var_f_anc_1 = var_Nstart_anc + var_N1_anc,
+         var_f_anc_2 = (1/mean_N1_anc^2)*var_N1_anc + (1/mean_Nstart_anc^2)*var_Nstart_anc,
+         repr.type = relevel(repr.type, ref = "WT"))
+```
+
+Finally let's calculate Hedge's $g$:
+
+```{r}
+J <- 1 - (3/(4*(4+4-2) - 1))
+alldata_2 <- alldata_2 %>%
+  mutate(d_1 = J*(fitness_ee_1 - fitness_anc_1)/sqrt((3*var_f_ee_1 + 3*var_f_anc_1)/(4+4-2)),
+         d_2 = J*(fitness_ee_2 - fitness_anc_2)/sqrt((3*var_f_ee_2 + 3*var_f_anc_2)/(4+4-2)),
+         
+         var_d_1 = (8/16)+(d_1^2/16),
+         var_d_2 = (8/16)+(d_2^2/16))
+```
+
+## Meta-analysis
+
+```{r}
+alldata_2 <- mutate(alldata_2, weight_1 = 1/var_d_1, weight_2 = 1/var_d_2)
+alldata_2$esid <- as.factor(1:nrow(alldata_2))
+# ES = difference in proportions
+model1 <- rma.mv(d_1 ~ isoline * temperature * repr.type,
+                 random = list(~ 1|population,
+                               ~ 1|esid),
+                 data = alldata_2,
+                 V = var_d_1)
+summary(model1)
+
+
+model2 <- rma.mv(d_2 ~ isoline * temperature * repr.type,
+                 random = list(~ 1|population,
+                               ~ 1|esid),
+                 data = alldata_2,
+                 V = var_d_2)
+summary(model2)
+```
+
+Forest plot of all effect sizes
+
+```{r}
+alldata_2$repro.temp <- interaction(alldata_2$repr.type, alldata_2$temperature)
+ggplot(data = arrange(alldata_2, d_2), aes(x = d_2, y = 1:nrow(alldata_2),
+       xmin = d_2-1.96*sqrt(var_d_2), xmax = d_2+1.96*sqrt(var_d_2),
+       colour = repro.temp)) +
+  geom_vline(xintercept = 0, col = 'blue', lty = 2) +
+  geom_point(size = 0.5) +
+  geom_errorbarh() +
+  theme_classic() +
+  scale_colour_manual(values = c("black", "red", "brown", "orange")) +
+  labs(x = 'Cohen\'s d', y = 'Study ID') +
+  facet_grid(cols = vars(isoline))
+```
