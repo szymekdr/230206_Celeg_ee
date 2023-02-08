@@ -272,6 +272,8 @@ Forest plot of all effect sizes
 ```{r}
 alldata_2$repro.temp <- interaction(alldata_2$repr.type, alldata_2$temperature)
 densscale <- 0.025
+iso_labs <- c("Line 6", "Line 8", "Line 9")
+names(iso_labs) <- c("Iz6", "Iz8", "Iz9")
 ggplot(data = arrange(alldata_2, d_2)) +
   geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
                colour = "gray", fill = "gray95", trim = F) +
@@ -283,6 +285,8 @@ ggplot(data = arrange(alldata_2, d_2)) +
                      colour = repro.temp)) +
   theme_classic() +
   scale_colour_manual(values = c("black", "red", "brown", "orange")) +
-  labs(x = 'Cohen\'s d', y = 'Study ID') +
-  facet_grid(cols = vars(isoline))
+  labs(x = 'Cohen\'s d', y = 'Replicate ID', ) +
+  facet_grid(~ isoline,
+             labeller = labeller(isoline = iso_labs)) +
+  theme(strip.background = element_rect(fill = "gray85", linewidth = 0))
 ```
