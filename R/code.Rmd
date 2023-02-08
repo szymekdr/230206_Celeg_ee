@@ -274,7 +274,7 @@ alldata_2$repro.temp <- interaction(alldata_2$repr.type, alldata_2$temperature)
 densscale <- 0.025
 ggplot(data = arrange(alldata_2, d_2)) +
   geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
-               colour = "gray", fill = "gray95") +
+               colour = "gray", fill = "gray95", trim = F) +
   geom_vline(xintercept = 0, col = 'blue', lty = 2) +
   geom_point(size = 0.5, aes(x = d_2, y = 1:nrow(alldata_2),
        colour = repro.temp)) +
