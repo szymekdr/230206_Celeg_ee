@@ -271,12 +271,16 @@ Forest plot of all effect sizes
 
 ```{r}
 alldata_2$repro.temp <- interaction(alldata_2$repr.type, alldata_2$temperature)
-ggplot(data = arrange(alldata_2, d_2), aes(x = d_2, y = 1:nrow(alldata_2),
-       xmin = d_2-1.96*sqrt(var_d_2), xmax = d_2+1.96*sqrt(var_d_2),
-       colour = repro.temp)) +
+densscale <- 0.025
+ggplot(data = arrange(alldata_2, d_2)) +
+  geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
+               colour = "gray", fill = "gray95") +
   geom_vline(xintercept = 0, col = 'blue', lty = 2) +
-  geom_point(size = 0.5) +
-  geom_errorbarh() +
+  geom_point(size = 0.5, aes(x = d_2, y = 1:nrow(alldata_2),
+       colour = repro.temp)) +
+  geom_errorbarh(aes(y = 1:nrow(alldata_2),
+                     xmin = d_2-1.96*sqrt(var_d_2), xmax = d_2+1.96*sqrt(var_d_2),
+                     colour = repro.temp)) +
   theme_classic() +
   scale_colour_manual(values = c("black", "red", "brown", "orange")) +
   labs(x = 'Cohen\'s d', y = 'Study ID') +
