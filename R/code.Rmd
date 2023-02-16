@@ -154,9 +154,10 @@ $$var(p)=\frac{p(1-p)}{N},$$
 and variance of the average of 4 proportions is (from stats theory)
 
 $$var(\hat{p}) = \frac{\sum_{i} var(p_{i})}{n^{2}} = \frac{1}{16}\sum_{i} var(p_{i}).$$
-Variance of a difference of two proportions $W_{1}=\hat{p}_{2}-\hat{p}_{1}$ is (from the delta method) $var(W_{1})=var(\hat{p}_{2})+var(\hat{p}_{1})$. We are ignoring here covariance of two proportions (which is reasonable) - but above we also ignored covariance of 4 replicated proportion which may not be reasonable, in such case we would have to increase the estimate (maybe worth trying) assuming some correlation $r$:
+Variance of a difference of two proportions $W_{1}=\hat{p}_{2}-\hat{p}_{1}$ is (from the delta method) $var(W_{1})=var(\hat{p}_{2})+var(\hat{p}_{1})$. We are ignoring here covariance of two proportions (which is reasonable, they should not covary in general 'casue are the result of (unpredictable) competition) - but above we also ignored covariance of 4 replicated proportion which may not be reasonable, in such case we would have to increase the estimate (maybe worth trying) assuming some correlation $r$:
 
 $$var(\hat{p}) = \frac{\sum_{i} var(p_{i}) + 2\sum_{i}\sum_{j<1}cov(p_{i}p_{j})}{n^{2}} = \\ \frac{1}{16}\sum_{i} var(p_{i})+2\sum_{i}\sum_{j>i}r \sqrt{var(p_{i})}\sqrt{var(p_{j})}.$$
+This correction can be seen as an alternative to correcting for multiple comparisons (and it actually achieves what we need - decreases Type I error in zero-ES cases to roughly 5%).
 
 Sampling variance of a log ratio is (from delta method):
 
@@ -288,5 +289,5 @@ ggplot(data = arrange(alldata_2, d_2)) +
   labs(x = 'Cohen\'s d', y = 'Replicate ID', ) +
   facet_grid(~ isoline,
              labeller = labeller(isoline = iso_labs)) +
-  theme(strip.background = element_rect(fill = "gray85", linewidth = 0))
+  theme(strip.background = element_rect(fill = "oldlace", linewidth = 0))
 ```

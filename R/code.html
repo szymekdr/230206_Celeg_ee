@@ -1562,7 +1562,7 @@ Drobniak</span></li>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(emmeans)</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(asreml)</span></code></pre></div>
-<pre><code>## Online License checked out Thu Feb  9 11:11:46 2023</code></pre>
+<pre><code>## Online License checked out Thu Feb  9 11:28:30 2023</code></pre>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(metafor)</span></code></pre></div>
 <div id="data-wrangling" class="section level2">
 <h2>Data wrangling</h2>
@@ -1909,14 +1909,19 @@ theory)</p>
 var(p_{i})}{n^{2}} = \frac{1}{16}\sum_{i} var(p_{i}).\]</span> Variance
 of a difference of two proportions <span class="math inline">\(W_{1}=\hat{p}_{2}-\hat{p}_{1}\)</span> is (from
 the delta method) <span class="math inline">\(var(W_{1})=var(\hat{p}_{2})+var(\hat{p}_{1})\)</span>.
-We are ignoring here covariance of two proportions (which is reasonable)
-- but above we also ignored covariance of 4 replicated proportion which
-may not be reasonable, in such case we would have to increase the
-estimate (maybe worth trying) assuming some correlation <span class="math inline">\(r\)</span>:</p>
+We are ignoring here covariance of two proportions (which is reasonable,
+they should not covary in general ’casue are the result of
+(unpredictable) competition) - but above we also ignored covariance of 4
+replicated proportion which may not be reasonable, in such case we would
+have to increase the estimate (maybe worth trying) assuming some
+correlation <span class="math inline">\(r\)</span>:</p>
 <p><span class="math display">\[var(\hat{p}) = \frac{\sum_{i} var(p_{i})
 + 2\sum_{i}\sum_{j&lt;1}cov(p_{i}p_{j})}{n^{2}} = \\
 \frac{1}{16}\sum_{i} var(p_{i})+2\sum_{i}\sum_{j&gt;i}r
-\sqrt{var(p_{i})}\sqrt{var(p_{j})}.\]</span></p>
+\sqrt{var(p_{i})}\sqrt{var(p_{j})}.\]</span> This correction can be seen
+as an alternative to correcting for multiple comparisons (and it
+actually achieves what we need - decreases Type I error in zero-ES cases
+to roughly 5%).</p>
 <p>Sampling variance of a log ratio is (from delta method):</p>
 <p><span class="math display">\[var(W_{2}) =
 var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\
