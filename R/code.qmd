@@ -1,20 +1,35 @@
 ---
-title: "C. elegans analysis"
+title: "C.elegans - re-analysis"
 author: "Szymek Drobniak"
 date: "`r Sys.Date()`"
-output: rmdformats::robobook
+format:
+  html:
+    toc: true
+    toc-location: left
+    toc-depth: 2
+    theme: simplex
+    embed-resources: true
+    code-fold: show
+    code-tools: true
+    number-sections: true
+crossref: 
+  fig-title: Figure     # (default is "Figure")
+  tbl-title: Table     # (default is "Table")
+  title-delim: —     # (default is ":")
+  fig-prefix: Fig.   # (default is "Figure")
+  tbl-prefix: Tab.    # (default is "Table")
 editor_options: 
   chunk_output_type: console
 ---
-```{r}
-
-```
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ```{r message = F}
+#| output: false
+#| warning: false
+#| label: packages
+#| code-overflow: wrap
+#| code-fold: true
+
+
 library(ggplot2)
 library(here)
 library(lme4)
@@ -291,3 +306,36 @@ ggplot(data = arrange(alldata_2, d_2)) +
              labeller = labeller(isoline = iso_labs)) +
   theme(strip.background = element_rect(fill = "oldlace", linewidth = 0))
 ```
+
+Divided by populations
+
+```{r}
+densscale <- 0.025
+iso_labs <- c("Line 6", "Line 8", "Line 9")
+names(iso_labs) <- c("Iz6", "Iz8", "Iz9")
+
+# create mock variables to form a good grid (6 x 6 populations)
+pops <- levels(alldata_2$population)[-(1:6)]
+mockids <- as.data.frame(cbind(pops,
+  rep(1:6, times = 6),
+  rep(1:6, each = 6))[1:length(pops), ])
+alldata_2 <- alldata_2 %>%
+  left_join(mockids, by = c("population" = "pops"))
+
+ggplot(data = arrange(alldata_2, d_2)) +
+  # geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
+  #              colour = "gray", fill = "gray95", trim = F) +
+  geom_vline(xintercept = 0, col = 'gray50', lty = 2) +
+  geom_point(size = 0.5, aes(x = d_2, y = 1:nrow(alldata_2),
+       colour = repro.temp)) +
+  geom_errorbarh(aes(y = 1:nrow(alldata_2),
+                     xmin = d_2-1.96*sqrt(var_d_2), xmax = d_2+1.96*sqrt(var_d_2),
+                     colour = repro.temp)) +
+  theme_classic() +
+  scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
+  labs(x = 'Cohen\'s d', y = 'Replicate ID', ) +
+  facet_grid(V2 ~ V3) +
+  theme(strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_rect(fill = "gray98"))
+  ```
