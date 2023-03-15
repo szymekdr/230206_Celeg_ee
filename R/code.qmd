@@ -51,7 +51,6 @@ First load the data:
 ```{r}
 alldata <- read.table(here("Data", "all.csv"), sep = ";", head = T, stringsAsFactors = T)
 ancdata <- read.table(here("Data", "anc.csv"), sep = ";", head = T, stringsAsFactors = T)
-
 ```
 
 Summarise the non-ancestral data to have means in each of 4 repeats:
