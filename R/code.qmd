@@ -303,7 +303,7 @@ ggplot(data = arrange(alldata_2, d_2)) +
   labs(x = 'Cohen\'s d', y = 'Replicate ID', ) +
   facet_grid(~ isoline,
              labeller = labeller(isoline = iso_labs)) +
-  theme(strip.background = element_rect(fill = "oldlace", linewidth = 0))
+  theme(strip.background = element_rect(fill = "oldlace", linewidth = 0), text = element_text(size = 15))
 ```
 
 Divided by populations
@@ -315,26 +315,92 @@ names(iso_labs) <- c("Iz6", "Iz8", "Iz9")
 
 # create mock variables to form a good grid (6 x 6 populations)
 pops <- levels(alldata_2$population)[-(1:6)]
-mockids <- as.data.frame(cbind(pops,
-  rep(1:6, times = 6),
-  rep(1:6, each = 6))[1:length(pops), ])
+mockids <- as.data.frame(cbind(
+    pops,
+    rep(1:6, times = 6),
+    rep(1:6, each = 6)
+)[1:length(pops), ])
 alldata_2 <- alldata_2 %>%
-  left_join(mockids, by = c("population" = "pops"))
+    left_join(mockids, by = c("population" = "pops")) %>%
+    arrange(isoline, repr.type, temperature)
 
-ggplot(data = arrange(alldata_2, d_2)) +
-  # geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
-  #              colour = "gray", fill = "gray95", trim = F) +
-  geom_vline(xintercept = 0, col = 'gray50', lty = 2) +
-  geom_point(size = 0.5, aes(x = d_2, y = 1:nrow(alldata_2),
-       colour = repro.temp)) +
-  geom_errorbarh(aes(y = 1:nrow(alldata_2),
-                     xmin = d_2-1.96*sqrt(var_d_2), xmax = d_2+1.96*sqrt(var_d_2),
-                     colour = repro.temp)) +
-  theme_classic() +
-  scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
-  labs(x = 'Cohen\'s d', y = 'Replicate ID', ) +
-  facet_grid(V2 ~ V3) +
-  theme(strip.background = element_blank(),
-        strip.text = element_blank(),
-        panel.background = element_rect(fill = "gray98"))
-  ```
+plots <- list()
+i <- 1
+for (popul in alldata_2$population) {
+    alldata_plot <- arrange(filter(alldata_2, population == popul), d_2)
+    alldata_plot$ys <- 1:nrow(alldata_plot)
+    cat(alldata_plot$ys); cat("\n")
+    plots[[i]] <- ggplot(data = alldata_plot) +
+        # geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
+        #              colour = "gray", fill = "gray95", trim = F) +
+        geom_vline(xintercept = 0, col = "gray50", lty = 2) +
+        geom_point(size = 0.5, aes(
+            x = d_2, y = ys
+        )) +
+        geom_errorbarh(aes(
+            y = ys,
+            xmin = d_2 - 1.96 * sqrt(var_d_2), xmax = d_2 + 1.96 * sqrt(var_d_2)
+        )) +
+        theme_classic() +
+        # scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
+        labs(x = "Cohen's d", y = "Replicate", ) +
+        # facet_grid(V2 ~ V3) +
+        theme(
+            strip.background = element_blank(),
+            strip.text = element_blank(),
+            panel.background = element_rect(fill = "gray98"),
+            text = element_text(size = 15)
+        )
+    i <- i + 1
+}
+```
+
+Predictions from `metafor` model.
+
+```{r}
+predictions <- predict(model2, newmods = rbind(
+  # i8 i9   t24   rFOG  it it   ir ir   tr    itr itr
+  c(0, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rOUT
+  c(1, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz8 t20 rOUT
+  c(0, 1,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz9 t20 rOUT
+  c(0, 0,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t24 rOUT
+  c(0, 0,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rFOG
+  c(1, 0,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz8 t24 rOUT
+  c(0, 1,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz9 t24 rOUT
+  c(1, 0,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz8 t20 rFOG
+  c(0, 1,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz9 t20 rFOG
+  c(0, 0,   1,    1,    0, 0,   0, 0,   0,    0, 0), #iz6 t24 rFOG
+  c(1, 0,   1,    1,    0, 0,   0, 0,   0,    0, 0), #iz8 t24 rFOG
+  c(0, 1,   1,    1,    0, 0,   0, 0,   0,    0, 0)  #iz9 t24 rFOG
+))
+
+predictions <- as.data.frame(predictions)
+predictions$izo <- c("i6", "i8", "i9", "i6", "i6", "i8", "i9", "i8", "i9", "i6", "i8", "i9")
+predictions$temp <- c("t20", "t20", "t20", "t24", "t20", "t24", "t24", "t20", "t20", "t24", "t24", "t24")
+predictions$repro <- c("wt", "wt", "wt", "wt", "fog", "wt", "wt", "fog", "fog", "fog", "fog", "fog")
+predictions$temprepr <- paste0(predictions$temp, " x ", predictions$repro)
+
+iso_labs <- c("Line 6", "Line 8", "Line 9")
+names(iso_labs) <- c("i6", "i8", "i9")
+ggplot(
+    data = as.data.frame(predictions),
+    mapping = aes(x = temprepr, y = pred)
+) +
+    geom_line(aes(group = izo)) +
+    geom_errorbar(aes(ymin = ci.lb, ymax = ci.ub), colour = "blue", width = 0.25) +
+    geom_point(size = 2) +
+    scale_x_discrete(limits = c("t20 x wt", "t24 x wt", "t20 x fog", "t24 x fog")) +
+    facet_wrap(~izo, scales = "free_x", labeller = labeller(izo = iso_labs)) +
+    theme_classic() +
+    theme(
+        text = element_text(size = 15),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "oldlace", linewidth = 0)
+    ) +
+    labs(x = "Temperature x Reproduction type", y = "Predicted effect size")
+
+
+# emmip(model3, ~temperature+repr.type, CIs = T,
+#       CIarg = list(col = "blue")) +
+#   theme_bw()
+```
