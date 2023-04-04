@@ -40,6 +40,7 @@ library(tidyverse)
 library(emmeans)
 library(asreml)
 library(metafor)
+library(gridExtra)
 ```
 
 ## Data wrangling
@@ -111,6 +112,9 @@ alldata_2 <- alldata_2 %>%
 Let's see the properties of these measures:
 
 ```{r}
+#| code-fold: true
+
+
 ggplot(alldata_2) +
   geom_density(mapping = aes(x = fitness_ee_1), colour = "brown") +
   geom_density(mapping = aes(x = fitness_ee_2), colour = "red") +
@@ -285,6 +289,9 @@ summary(model2)
 Forest plot of all effect sizes
 
 ```{r}
+#| code-fold: true
+
+
 alldata_2$repro.temp <- interaction(alldata_2$repr.type, alldata_2$temperature)
 densscale <- 0.025
 iso_labs <- c("Line 6", "Line 8", "Line 9")
@@ -309,6 +316,9 @@ ggplot(data = arrange(alldata_2, d_2)) +
 Divided by populations
 
 ```{r}
+#| code-fold: true
+
+
 densscale <- 0.025
 iso_labs <- c("Line 6", "Line 8", "Line 9")
 names(iso_labs) <- c("Iz6", "Iz8", "Iz9")
@@ -324,40 +334,79 @@ alldata_2 <- alldata_2 %>%
     left_join(mockids, by = c("population" = "pops")) %>%
     arrange(isoline, repr.type, temperature)
 
-plots <- list()
-i <- 1
-for (popul in alldata_2$population) {
-    alldata_plot <- arrange(filter(alldata_2, population == popul), d_2)
-    alldata_plot$ys <- 1:nrow(alldata_plot)
-    cat(alldata_plot$ys); cat("\n")
-    plots[[i]] <- ggplot(data = alldata_plot) +
-        # geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
-        #              colour = "gray", fill = "gray95", trim = F) +
-        geom_vline(xintercept = 0, col = "gray50", lty = 2) +
-        geom_point(size = 0.5, aes(
-            x = d_2, y = ys
-        )) +
-        geom_errorbarh(aes(
-            y = ys,
-            xmin = d_2 - 1.96 * sqrt(var_d_2), xmax = d_2 + 1.96 * sqrt(var_d_2)
-        )) +
-        theme_classic() +
-        # scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
-        labs(x = "Cohen's d", y = "Replicate", ) +
-        # facet_grid(V2 ~ V3) +
-        theme(
-            strip.background = element_blank(),
-            strip.text = element_blank(),
-            panel.background = element_rect(fill = "gray98"),
-            text = element_text(size = 15)
-        )
-    i <- i + 1
-}
+# plots <- list()
+# i <- 1
+# for (popul in alldata_2$population) {
+#     alldata_plot <- arrange(filter(alldata_2, population == popul), d_2)
+#     alldata_plot$ys <- 1:nrow(alldata_plot)
+#     cat(alldata_plot$ys)
+#     cat("\n")
+#     plots[[i]] <- ggplot(data = alldata_plot) +
+#         # geom_density(aes(x = d_2, y = (..count..)*densscale*nrow(alldata_2)),
+#         #              colour = "gray", fill = "gray95", trim = F) +
+#         geom_vline(xintercept = 0, col = "gray50", lty = 2) +
+#         geom_point(size = 0.5, aes(
+#             x = d_2, y = ys
+#         )) +
+#         geom_errorbarh(aes(
+#             y = ys,
+#             xmin = d_2 - 1.96 * sqrt(var_d_2), xmax = d_2 + 1.96 * sqrt(var_d_2)
+#         )) +
+#         geom_text(label = popul, x = -3, y = 4.25, size = 20, colour = "gray") +
+#         theme_classic() +
+#         # scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
+#         labs(x = "Cohen's d", y = "Replicate", ) +
+#         # facet_grid(V2 ~ V3) +
+#         xlim(min(alldata_2$d_2 - 2 * sqrt(alldata_2$var_d_2)), max(alldata_2$d_2 + 2 * sqrt(alldata_2$var_d_2))) +
+#         ylim(0.5, 4.5) +
+#         theme(
+#             strip.background = element_blank(),
+#             strip.text = element_blank(),
+#             panel.background = element_rect(fill = "gray98"),
+#             text = element_text(size = 15)
+#         )
+#     names(plots)[i] <- popul
+#     i <- i + 1
+# }
+# nCol <- ceiling(sqrt(length(plots)))
+# grid.arrange(grobs = plots, ncol = nCol)
+
+alldata_2 <- alldata_2 %>%
+    group_by(population) %>%
+    mutate(ys = 1:n())
+alldata_2 %>%
+    ggplot() +
+    geom_text(aes(label = population), x = 3, y = 4.25, size = 5, colour = "gray", hjust = 0, vjust = 1) +
+    geom_vline(xintercept = 0, col = "gray50", lty = 2) +
+    geom_point(size = 0.9, aes(
+        x = d_2, y = ys
+    )) +
+    geom_errorbarh(aes(
+        y = ys,
+        xmin = d_2 - 1.96 * sqrt(var_d_2), xmax = d_2 + 1.96 * sqrt(var_d_2)
+    ), height = 0.35) +
+    theme_classic() +
+    # scale_colour_manual(values = c("blue3", "purple3", "magenta", "firebrick1")) +
+    labs(x = "Cohen's d", y = "Replicate", ) +
+    facet_grid(V2 ~ V3) +
+    xlim(min(alldata_2$d_2 - 2 * sqrt(alldata_2$var_d_2)), max(alldata_2$d_2 + 2 * sqrt(alldata_2$var_d_2))) +
+    ylim(0.5, 4.5) +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_rect(fill = "gray98"),
+        text = element_text(size = 15)
+    )
+
 ```
+
 
 Predictions from `metafor` model.
 
 ```{r}
+#| code-fold: true
+
+
 predictions <- predict(model2, newmods = rbind(
   # i8 i9   t24   rFOG  it it   ir ir   tr    itr itr
   c(0, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rOUT
@@ -365,13 +414,13 @@ predictions <- predict(model2, newmods = rbind(
   c(0, 1,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz9 t20 rOUT
   c(0, 0,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t24 rOUT
   c(0, 0,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rFOG
-  c(1, 0,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz8 t24 rOUT
-  c(0, 1,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz9 t24 rOUT
-  c(1, 0,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz8 t20 rFOG
-  c(0, 1,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz9 t20 rFOG
-  c(0, 0,   1,    1,    0, 0,   0, 0,   0,    0, 0), #iz6 t24 rFOG
-  c(1, 0,   1,    1,    0, 0,   0, 0,   0,    0, 0), #iz8 t24 rFOG
-  c(0, 1,   1,    1,    0, 0,   0, 0,   0,    0, 0)  #iz9 t24 rFOG
+  c(1, 0,   1,    0,    1, 0,   0, 0,   0,    0, 0), #iz8 t24 rOUT
+  c(0, 1,   1,    0,    0, 1,   0, 0,   0,    0, 0), #iz9 t24 rOUT
+  c(1, 0,   0,    1,    0, 0,   1, 0,   0,    0, 0), #iz8 t20 rFOG
+  c(0, 1,   0,    1,    0, 0,   0, 1,   0,    0, 0), #iz9 t20 rFOG
+  c(0, 0,   1,    1,    0, 0,   0, 0,   1,    0, 0), #iz6 t24 rFOG
+  c(1, 0,   1,    1,    1, 0,   1, 0,   1,    1, 0), #iz8 t24 rFOG
+  c(0, 1,   1,    1,    0, 1,   0, 1,   1,    0, 1)  #iz9 t24 rFOG
 ))
 
 predictions <- as.data.frame(predictions)
