@@ -281,11 +281,22 @@ summary(model1)
 
 model2 <- rma.mv(d_2 ~ isoline * temperature * repr.type,
                  random = list(~ 1|population,
-                               ~ 1|block,
                                ~ 1|esid),
                  data = alldata_2,
                  V = var_d_2)
 summary(model2)
+```
+
+Additional model with block effect - this will become our main final model.
+
+```{r}
+model3 <- rma.mv(d_2 ~ isoline * temperature * repr.type,
+                 random = list(~ 1|population,
+                               ~ 1|block,
+                               ~ 1|esid),
+                 data = alldata_2,
+                 V = var_d_2)
+summary(model3)
 ```
 
 Forest plot of all effect sizes
@@ -409,7 +420,7 @@ Predictions from `metafor` model.
 #| code-fold: true
 
 
-predictions <- predict(model2, newmods = rbind(
+predictions <- predict(model3, newmods = rbind(
   # i8 i9   t24   rFOG  it it   ir ir   tr    itr itr
   c(0, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rOUT
   c(1, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz8 t20 rOUT
