@@ -213,6 +213,7 @@ alldata_2 <- alldata %>%
             temperature = unique(temperature),
             repr.type = unique(repr.type),
             anc_pop = unique(anc_pop),
+            block = unique(block),
             .groups = "drop")
 ```
 
@@ -280,6 +281,7 @@ summary(model1)
 
 model2 <- rma.mv(d_2 ~ isoline * temperature * repr.type,
                  random = list(~ 1|population,
+                               ~ 1|block,
                                ~ 1|esid),
                  data = alldata_2,
                  V = var_d_2)
