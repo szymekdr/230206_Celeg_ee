@@ -179,9 +179,9 @@ This correction can be seen as an alternative to correcting for multiple compari
 
 Sampling variance of a log ratio is (from delta method):
 
-$$var(W_{2}) = var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\ 
+<!-- $$var(W_{2}) = var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\ 
 [\frac{\partial}{\partial \hat{p_{2}}}(ln\:\hat{p_{2}}-ln\:\hat{p_{1}})]^{2}\:var(p_{2}) + \\
-[\frac{\partial}{\partial \hat{p_{1}}}(ln\:\hat{p}_{2}-ln\:\hat{p}_{1})]^{2}\:var(\hat{p}_{1}) = \\ \frac{1}{\hat{p_{2}}^{2}}\:var(\hat{p_{2}})+\frac{1}{\hat{p_{1}}^{2}}\:var(\hat{p_{1}}).$$
+[\frac{\partial}{\partial \hat{p_{1}}}(ln\:\hat{p}_{2}-ln\:\hat{p}_{1})]^{2}\:var(\hat{p}_{1}) = \\ \frac{1}{\hat{p_{2}}^{2}}\:var(\hat{p_{2}})+\frac{1}{\hat{p_{1}}^{2}}\:var(\hat{p_{1}}).$$ -->
 
 And finally - using those variances and fitness estimates - we can calculate $d$ and it's sampling variance (in the usual way):
 
