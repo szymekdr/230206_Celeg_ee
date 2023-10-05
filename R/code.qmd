@@ -52,6 +52,7 @@ First load the data:
 ```{r}
 alldata <- read.table(here("Data", "all.csv"), sep = ";", head = T, stringsAsFactors = T)
 ancdata <- read.table(here("Data", "anc.csv"), sep = ";", head = T, stringsAsFactors = T)
+gens <- read.table(here("Data", "generations.csv"), sep = ";", head = T, stringsAsFactors = T)
 ```
 
 Summarise the non-ancestral data to have means in each of 4 repeats:
@@ -265,6 +266,22 @@ alldata_2 <- alldata_2 %>%
          var_d_2 = (8/16)+(d_2^2/16))
 ```
 
+Add generation numbers for each population:
+
+```{r}
+alldata_2 <- alldata_2 %>%
+  left_join(gens, by = c("population" = "population"))
+```
+
+Check if generation time is consistently related to the effect size.
+
+```{r}
+ggplot(alldata_2) +
+  geom_point(aes(x = gen_nr, y = d_2)) +
+  geom_smooth(aes(x = gen_nr, y = d_2), method = "lm") +
+  theme_classic() + theme(text = element_text(size = 15)) +
+  labs(x = "Number of generations", y = "Effect size")
+```
 ## Meta-analysis
 
 ```{r}
@@ -290,7 +307,7 @@ summary(model2)
 Additional model with block effect - this will become our main final model.
 
 ```{r}
-model3 <- rma.mv(d_2 ~ isoline * temperature * repr.type,
+model3 <- rma.mv(d_2 ~ isoline * temperature * repr.type + gen_nr,
                  random = list(~ 1|population,
                                ~ 1|block,
                                ~ 1|esid),
@@ -336,6 +353,7 @@ densscale <- 0.025
 iso_labs <- c("Line 6", "Line 8", "Line 9")
 names(iso_labs) <- c("Iz6", "Iz8", "Iz9")
 
+alldata_2$population <- as.factor(alldata_2$population)
 # create mock variables to form a good grid (6 x 6 populations)
 pops <- levels(alldata_2$population)[-(1:6)]
 mockids <- as.data.frame(cbind(
@@ -419,21 +437,22 @@ Predictions from `metafor` model.
 ```{r}
 #| code-fold: true
 
+gen_av <- mean(alldata_2$gen_nr)
 
 predictions <- predict(model3, newmods = rbind(
-  # i8 i9   t24   rFOG  it it   ir ir   tr    itr itr
-  c(0, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rOUT
-  c(1, 0,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz8 t20 rOUT
-  c(0, 1,   0,    0,    0, 0,   0, 0,   0,    0, 0), #iz9 t20 rOUT
-  c(0, 0,   1,    0,    0, 0,   0, 0,   0,    0, 0), #iz6 t24 rOUT
-  c(0, 0,   0,    1,    0, 0,   0, 0,   0,    0, 0), #iz6 t20 rFOG
-  c(1, 0,   1,    0,    1, 0,   0, 0,   0,    0, 0), #iz8 t24 rOUT
-  c(0, 1,   1,    0,    0, 1,   0, 0,   0,    0, 0), #iz9 t24 rOUT
-  c(1, 0,   0,    1,    0, 0,   1, 0,   0,    0, 0), #iz8 t20 rFOG
-  c(0, 1,   0,    1,    0, 0,   0, 1,   0,    0, 0), #iz9 t20 rFOG
-  c(0, 0,   1,    1,    0, 0,   0, 0,   1,    0, 0), #iz6 t24 rFOG
-  c(1, 0,   1,    1,    1, 0,   1, 0,   1,    1, 0), #iz8 t24 rFOG
-  c(0, 1,   1,    1,    0, 1,   0, 1,   1,    0, 1)  #iz9 t24 rFOG
+  # i8 i9   t24   rFOG  gen_av  it it   ir ir   tr    itr itr
+  c(0, 0,   0,    0,    gen_av, 0, 0,   0, 0,   0,    0, 0), #iz6 t20 rOUT
+  c(1, 0,   0,    0,    gen_av, 0, 0,   0, 0,   0,    0, 0), #iz8 t20 rOUT
+  c(0, 1,   0,    0,    gen_av, 0, 0,   0, 0,   0,    0, 0), #iz9 t20 rOUT
+  c(0, 0,   1,    0,    gen_av, 0, 0,   0, 0,   0,    0, 0), #iz6 t24 rOUT
+  c(0, 0,   0,    1,    gen_av, 0, 0,   0, 0,   0,    0, 0), #iz6 t20 rFOG
+  c(1, 0,   1,    0,    gen_av, 1, 0,   0, 0,   0,    0, 0), #iz8 t24 rOUT
+  c(0, 1,   1,    0,    gen_av, 0, 1,   0, 0,   0,    0, 0), #iz9 t24 rOUT
+  c(1, 0,   0,    1,    gen_av, 0, 0,   1, 0,   0,    0, 0), #iz8 t20 rFOG
+  c(0, 1,   0,    1,    gen_av, 0, 0,   0, 1,   0,    0, 0), #iz9 t20 rFOG
+  c(0, 0,   1,    1,    gen_av, 0, 0,   0, 0,   1,    0, 0), #iz6 t24 rFOG
+  c(1, 0,   1,    1,    gen_av, 1, 0,   1, 0,   1,    1, 0), #iz8 t24 rFOG
+  c(0, 1,   1,    1,    gen_av, 0, 1,   0, 1,   1,    0, 1)  #iz9 t24 rFOG
 ))
 
 predictions <- as.data.frame(predictions)
