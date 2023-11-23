@@ -3100,9 +3100,9 @@ boundary (singular) fit: see help(&#39;isSingular&#39;)</code></pre>
 <p><span class="math display">\[var(\hat{p}) = \frac{\sum_{i} var(p_{i})}{n^{2}} = \frac{1}{16}\sum_{i} var(p_{i}).\]</span> Variance of a difference of two proportions <span class="math inline">\(W_{1}=\hat{p}_{2}-\hat{p}_{1}\)</span> is (from the delta method) <span class="math inline">\(var(W_{1})=var(\hat{p}_{2})+var(\hat{p}_{1})\)</span>. We are ignoring here covariance of two proportions (which is reasonable, they should not covary in general ’casue are the result of (unpredictable) competition) - but above we also ignored covariance of 4 replicated proportion which may not be reasonable, in such case we would have to increase the estimate (maybe worth trying) assuming some correlation <span class="math inline">\(r\)</span>:</p>
 <p><span class="math display">\[var(\hat{p}) = \frac{\sum_{i} var(p_{i}) + 2\sum_{i}\sum_{j&lt;1}cov(p_{i}p_{j})}{n^{2}} = \\ \frac{1}{16}\sum_{i} var(p_{i})+2\sum_{i}\sum_{j&gt;i}r \sqrt{var(p_{i})}\sqrt{var(p_{j})}.\]</span> This correction can be seen as an alternative to correcting for multiple comparisons (and it actually achieves what we need - decreases Type I error in zero-ES cases to roughly 5%).</p>
 <p>Sampling variance of a log ratio is (from delta method):</p>
-<!-- $$var(W_{2}) = var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\ 
-[\frac{\partial}{\partial \hat{p_{2}}}(ln\:\hat{p_{2}}-ln\:\hat{p_{1}})]^{2}\:var(p_{2}) + \\
-[\frac{\partial}{\partial \hat{p_{1}}}(ln\:\hat{p}_{2}-ln\:\hat{p}_{1})]^{2}\:var(\hat{p}_{1}) = \\ \frac{1}{\hat{p_{2}}^{2}}\:var(\hat{p_{2}})+\frac{1}{\hat{p_{1}}^{2}}\:var(\hat{p_{1}}).$$ -->
+<p><span class="math display">\[var(W_{2}) = var[ln(\frac{\hat{p_{2}}}{\hat{p_{1}}})] = \\
+  [\frac{\partial}{\partial \hat{p_{2}}}(ln\:\hat{p_{2}}-ln\:\hat{p_{1}})]^{2}\:var(p_{2}) + \\
+  [\frac{\partial}{\partial \hat{p_{1}}}(ln\:\hat{p}_{2}-ln\:\hat{p}_{1})]^{2}\:var(\hat{p}_{1}) = \\ \frac{1}{\hat{p_{2}}^{2}}\:var(\hat{p_{2}})+\frac{1}{\hat{p_{1}}^{2}}\:var(\hat{p_{1}}).\]</span></p>
 <p>And finally - using those variances and fitness estimates - we can calculate <span class="math inline">\(d\)</span> and it’s sampling variance (in the usual way):</p>
 <p><span class="math display">\[d = \frac {{W_{x,ee}} - {W_{x,anc}}} {s_{pooled}}J,\]</span> <span class="math display">\[s_{pooled} = \sqrt{\frac{(n_{1}-1)\:var(W_{x,ee})+(n_{2}-1)\:var(W_{x,anc})}{n_{ee}+n_{anc}-2}},\]</span></p>
 <p><span class="math display">\[J = 1-\frac{3}{4(n_{ee}+n_{anc}-2)-1}.\]</span></p>
